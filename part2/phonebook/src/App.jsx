@@ -1,8 +1,10 @@
-import { useState } from 'react'
+/* eslint-disable react/prop-types */
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 
 const Person = ( {person} ) => {
   return (
-    <div>{person.name} {person.phone}</div>
+    <div>{person.name} {person.number}</div>
   )
 }
 
@@ -10,7 +12,7 @@ const Persons = ( {persons} ) => {
   return (
     <div>
       {persons.map(person => 
-      <Person key={person.name} person={person} />
+      <Person key={person.id} person={person} />
     )}
     </div>
   )
@@ -39,19 +41,37 @@ const PersonForm = (props) => {
 
 
 const App = () => {
+  /*
   const [persons, setPersons] = useState([
     { name: 'Arto Hellas',
-      phone: '040-1234567'
+      number: '040-1234567',
+      id: 1
     }
-  ]) 
+  ]) */
+  const [persons, setPersons]  = useState([])
   const [newName, setNewName] = useState('')
-  const [newPhone, setNewPhone] = useState('')
+  const [newNumber, setNewNumber] = useState('')
+
+  const hook = () => {
+    console.log('effect')
+    axios
+      .get('http://localhost:3001/persons')
+      .then(response => {
+        console.log('promise fulfilled')
+        setPersons(response.data)
+      })
+  }
+
+  useEffect(hook, [])
+  
+  console.log('render', persons.length, 'persons')
 
   const addPerson = (event) => {
     event.preventDefault()
     const personObject = {
       name: newName,
-      phone: newPhone
+      number: newNumber,
+      id: persons.length + 1
     }
 
     let duplicate = false
@@ -70,6 +90,8 @@ const App = () => {
     else{
       setPersons(persons.concat(personObject))
       setNewName('')
+      setNewNumber('')
+      console.log(personObject)
     }
 
   }
@@ -79,16 +101,16 @@ const App = () => {
     setNewName(event.target.value)
   }
 
-  const handlePhoneChange = (event) => {
+  const handleNumberChange = (event) => {
     console.log(event.target.value)
-    setNewPhone(event.target.value)
+    setNewNumber(event.target.value)
   }
 
   return (
     <div>
       <h2>Phonebook</h2>
       <h3>Add a new</h3>
-      <PersonForm onSubmitFunc = {addPerson} valueName = {newName} onChangeName = {handleNameChange} valueNumber = {newPhone} onChangeNumber = {handlePhoneChange} />
+      <PersonForm onSubmitFunc = {addPerson} valueName = {newName} onChangeName = {handleNameChange} valueNumber = {newNumber} onChangeNumber = {handleNumberChange} />
       <h2>Numbers</h2>
       <Persons persons = {persons} />
     </div>
