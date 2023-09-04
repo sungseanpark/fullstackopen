@@ -2,6 +2,30 @@
 import { useState, useEffect } from 'react'
 import personService from './services/persons'
 
+const Notification = ({ message }) => {
+  if (message === '') {
+    return null
+  }
+
+  return (
+    <div className='notification'>
+      {message}
+    </div>
+  )
+}
+
+const Error = ({ message }) => {
+  if (message === '') {
+    return null
+  }
+
+  return (
+    <div className='error'>
+      {message}
+    </div>
+  )
+}
+
 const Person = ( {person, deletePerson} ) => {
   return (
     <div>{person.name} {person.number} <button onClick = {deletePerson}>{'delete'}</button></div>
@@ -45,6 +69,8 @@ const App = () => {
   const [persons, setPersons]  = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
+  const [notificationMessage, setNotificationMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     personService
@@ -81,6 +107,22 @@ const App = () => {
           .update(duplicateId, personObject)
           .then(returnedPerson => {
             setPersons(persons.map(person => person.id !== duplicateId ? person : returnedPerson))
+            setNotificationMessage(
+              `Replaced phone number for '${personObject.name}'`
+            )
+            setTimeout(() => {
+              setNotificationMessage('')
+            }, 5000)
+          })
+          .catch(error => {
+            setErrorMessage(
+              `Information of '${personObject.name}' has already been removed from server`
+            )
+            setTimeout(() => {
+              setErrorMessage(null)
+            }, 5000)
+            setPersons(persons.filter(person => person.id !== duplicateId))
+
           })
       }
     }
@@ -90,6 +132,13 @@ const App = () => {
         .then(returnedPerson => {
           setPersons(persons.concat(returnedPerson))
         })
+
+        setNotificationMessage(
+          `Added '${personObject.name}'`
+        )
+        setTimeout(() => {
+          setNotificationMessage('')
+        }, 5000)
 
     }
 
@@ -130,6 +179,8 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={notificationMessage} />
+      <Error message={errorMessage} />
       <h3>Add a new</h3>
       <PersonForm onSubmitFunc = {addPerson} valueName = {newName} onChangeName = {handleNameChange} valueNumber = {newNumber} onChangeNumber = {handleNumberChange} />
       <h2>Numbers</h2>
