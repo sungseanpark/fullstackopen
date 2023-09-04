@@ -1,18 +1,18 @@
 /* eslint-disable react/prop-types */
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import personService from './services/persons'
 
-const Person = ( {person} ) => {
+const Person = ( {person, deletePerson} ) => {
   return (
-    <div>{person.name} {person.number}</div>
+    <div>{person.name} {person.number} <button onClick = {deletePerson}>{'delete'}</button></div>
   )
 }
 
-const Persons = ( {persons} ) => {
+const Persons = ( {persons, deletePerson} ) => {
   return (
     <div>
       {persons.map(person => 
-      <Person key={person.id} person={person} />
+      <Person key={person.id} person={person} deletePerson = {() => deletePerson(person.id)} />
     )}
     </div>
   )
@@ -41,28 +41,18 @@ const PersonForm = (props) => {
 
 
 const App = () => {
-  /*
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas',
-      number: '040-1234567',
-      id: 1
-    }
-  ]) */
+
   const [persons, setPersons]  = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
 
-  const hook = () => {
-    console.log('effect')
-    axios
-      .get('http://localhost:3001/persons')
-      .then(response => {
-        console.log('promise fulfilled')
-        setPersons(response.data)
+  useEffect(() => {
+    personService
+      .getAll()
+      .then(initialPersons => {
+        setPersons(initialPersons)
       })
-  }
-
-  useEffect(hook, [])
+  }, [])
   
   console.log('render', persons.length, 'persons')
 
@@ -70,28 +60,59 @@ const App = () => {
     event.preventDefault()
     const personObject = {
       name: newName,
-      number: newNumber,
-      id: persons.length + 1
+      number: newNumber
     }
 
     let duplicate = false
+    let duplicateId
 
     persons.forEach((person) => {
       if(person.name === newName)
         {
           duplicate = true
+          duplicateId = person.id
         }
       }
     )
 
     if(duplicate){
-      alert(`${newName} is already added to phonebook`)
+      if(window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)){
+        personService
+          .update(duplicateId, personObject)
+          .then(returnedPerson => {
+            setPersons(persons.map(person => person.id !== duplicateId ? person : returnedPerson))
+          })
+      }
     }
     else{
-      setPersons(persons.concat(personObject))
-      setNewName('')
-      setNewNumber('')
-      console.log(personObject)
+      personService
+        .create(personObject)
+        .then(returnedPerson => {
+          setPersons(persons.concat(returnedPerson))
+        })
+
+    }
+
+  }
+
+  const deletePersonOf = id => {
+
+    const person = persons.find(person => person.id === id)
+
+    if (window.confirm(`Delete ${person.name}?`)){
+      personService
+      .deleteFromServer(id)
+      .then(response => {
+        console.log(response)
+        personService
+          .getAll()
+          .then(updatedPersons => {
+            setPersons(updatedPersons)
+          })
+      })
+      .catch(error => {
+        console.log('there was an error while deleting')
+      })
     }
 
   }
@@ -112,7 +133,7 @@ const App = () => {
       <h3>Add a new</h3>
       <PersonForm onSubmitFunc = {addPerson} valueName = {newName} onChangeName = {handleNameChange} valueNumber = {newNumber} onChangeNumber = {handleNumberChange} />
       <h2>Numbers</h2>
-      <Persons persons = {persons} />
+      <Persons persons = {persons} deletePerson = {deletePersonOf}  />
     </div>
   )
 }
